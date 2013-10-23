@@ -102,6 +102,10 @@ for service in services:
             else:
                 services[tmpservice]['StopCount'] += 1
 
+        if stopCode is None or len(stopCode) == 0:
+            print(m)
+            continue
+
         if not stopCode in stops:
             stops[stopCode] = { 'StopCode': stopCode,
                                 'StopName': stopName,
