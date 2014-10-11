@@ -34,209 +34,210 @@ import android.database.Cursor;
 import android.util.Log;
 import android.util.Xml;
 
-public class SettingsHelper 
+public class SettingsHelper
 {
-	public static final String BOOKMARKS_TABLE = "Bookmarks";
-	public static final String SETTINGS_TABLE = "Settings";
-	
-	public static final String ID = "_id";
-	public static final String BOOKMARKS_COL_STOPNAME = "StopName";
+    public static final String BOOKMARKS_TABLE = "Bookmarks";
+    public static final String SETTINGS_TABLE = "Settings";
 
-	public static final String SETTINGS_COL_STOPCODE = "StopCode";
-	public static final String SETTINGS_COL_SETTINGNAME = "SettingName";
-	public static final String SETTINGS_COL_SETTINGVALUE = "SettingValue";
+    public static final String ID = "_id";
+    public static final String BOOKMARKS_COL_STOPNAME = "StopName";
 
-	private SQLiteDatabase db;
-	
-	public SettingsHelper(Context context)
-	{
-		db = new SettingsDbOpenHelper(context).getWritableDatabase();
-	}
-	
-	public void close()
-	{
-		if (db != null)
-			db.close();
-		db = null;
-	}
+    public static final String SETTINGS_COL_STOPCODE = "StopCode";
+    public static final String SETTINGS_COL_SETTINGNAME = "SettingName";
+    public static final String SETTINGS_COL_SETTINGVALUE = "SettingValue";
+
+    private SQLiteDatabase db;
+
+    public SettingsHelper(Context context)
+    {
+        db = new SettingsDbOpenHelper(context).getWritableDatabase();
+    }
+
+    public void close()
+    {
+        if (db != null)
+            db.close();
+        db = null;
+    }
 
 
-	public boolean isBookmark(long stopCode)
-	{
-		Cursor c = null;
-		try {
-			c = db.query(BOOKMARKS_TABLE, 
-						new String[] { ID }, 
-						"_id = ?",
-						new String[] { Long.toString(stopCode) }, 
-						null, 
-						null, 
-						null);
-			return c.moveToNext();
-		} finally {
-			if (c != null)
-				c.close();
-		}
-	}
+    public boolean isBookmark(long stopCode)
+    {
+        Cursor c = null;
+        try {
+            c = db.query(BOOKMARKS_TABLE,
+                        new String[] { ID },
+                        "_id = ?",
+                        new String[] { Long.toString(stopCode) },
+                        null,
+                        null,
+                        null);
+            return c.moveToNext();
+        } finally {
+            if (c != null)
+                c.close();
+        }
+    }
 
-	public String getBookmarkName(long stopCode)
-	{
-		Cursor c = null;
-		try {
-			c = db.query(BOOKMARKS_TABLE, 
-						new String[] { BOOKMARKS_COL_STOPNAME }, 
-						"_id = ?",
-						new String[] { Long.toString(stopCode) }, 
-						null, 
-						null, 
-						null);
-			if (c.moveToNext())
-				return c.getString(0);
-			else
-				return null;
-		} finally {
-			if (c != null)
-				c.close();
-		}
-	}
+    public String getBookmarkName(long stopCode)
+    {
+        Cursor c = null;
+        try {
+            c = db.query(BOOKMARKS_TABLE,
+                        new String[] { BOOKMARKS_COL_STOPNAME },
+                        "_id = ?",
+                        new String[] { Long.toString(stopCode) },
+                        null,
+                        null,
+                        null);
+            if (c.moveToNext())
+                return c.getString(0);
+            else
+                return null;
+        } finally {
+            if (c != null)
+                c.close();
+        }
+    }
 
-	public Cursor getBookmarks()
-	{
-		return db.query(BOOKMARKS_TABLE, null, null, null, null, null, BOOKMARKS_COL_STOPNAME);
-	}
+    public Cursor getBookmarks()
+    {
+        return db.query(BOOKMARKS_TABLE, null, null, null, null, null, BOOKMARKS_COL_STOPNAME);
+    }
 
-	public void deleteBookmark(long bookmarkId) {
-		db.execSQL("DELETE FROM Bookmarks WHERE _id = ?", new Object[] { bookmarkId });
-		settingsChanged();
-	}
-	
-	public void deleteBookmarks() {
-		db.execSQL("DELETE FROM Bookmarks");
-		settingsChanged();
-	}
-	
-	public void addBookmark(long bookmarkId, String stopName) {
-		try {
-			db.execSQL("INSERT INTO Bookmarks VALUES (?, ?)", new Object[] { bookmarkId, stopName });
-			settingsChanged();
-		} catch (Exception ex) {
-		}
-	}
-	
-	public void renameBookmark(long bookmarkId, String stopName) {
-		try {
-			db.execSQL("UPDATE Bookmarks SET StopName=? WHERE _id = ?", new Object[] { stopName, bookmarkId });
-			settingsChanged();
-		} catch (Exception ex) {
-		}
-	}
-	
-	public String getGlobalSetting(String name, String defaultValue)
-	{
-		return getBusStopSetting(-1, name, defaultValue);
-	}
-	
-	public void setGlobalSetting(String name, String value)
-	{
-		setBusStopSetting(-1, name, value);
-	}
-	
-	public void deleteGlobalSetting(String name)
-	{
-		deleteBusStopSetting(-1, name);
-	}
+    public void deleteBookmark(long bookmarkId) {
+        db.execSQL("DELETE FROM Bookmarks WHERE _id = ?", new Object[] { bookmarkId });
+        settingsChanged();
+    }
 
-	public String getBusStopSetting(long stopCode, String name, String defaultValue)
-	{
-		String result = defaultValue;
-		
-		Cursor c = null;
-		try {
-			c = db.query(SETTINGS_TABLE, 
-						new String[] { SETTINGS_COL_SETTINGVALUE }, 
-						"StopCode = ? AND SettingName = ?",
-						new String[] { Long.toString(stopCode), name }, 
-						null, 
-						null, 
-						null);
-			if (c.moveToNext())
-				result = c.getString(0);
-		} finally {
-			if (c != null)
-				c.close();
-		}
-		
-		return result;
-	}
+    public void deleteBookmarks() {
+        db.execSQL("DELETE FROM Bookmarks");
+        settingsChanged();
+    }
 
-	public void setBusStopSetting(long stopCode, String name, String value)
-	{
-		deleteBusStopSetting(stopCode, name);
-		db.execSQL("INSERT INTO Settings (StopCode, SettingName, SettingValue) VALUES (?, ?, ?)", new Object[] {stopCode, name, value});
-		if (stopCode != -1)
-			settingsChanged();
-	}
+    public void addBookmark(long bookmarkId, String stopName) {
+        try {
+            db.execSQL("INSERT INTO Bookmarks VALUES (?, ?)", new Object[] { bookmarkId, stopName });
+            settingsChanged();
+        } catch (Exception ex) {
+        }
+    }
 
-	public void deleteBusStopSetting(long stopCode, String name)
-	{
-		db.execSQL("DELETE FROM Settings WHERE StopCode = ? AND SettingName = ?", new Object[] { stopCode, name });
-		if (stopCode != -1)
-			settingsChanged();
-	}
+    public void renameBookmark(long bookmarkId, String stopName) {
+        try {
+            db.execSQL("UPDATE Bookmarks SET StopName=? WHERE _id = ?", new Object[] { stopName, bookmarkId });
+            settingsChanged();
+        } catch (Exception ex) {
+        }
+    }
 
-	public void deleteBusStopSettings(long stopCode)
-	{
-		db.execSQL("DELETE FROM Settings WHERE StopCode = ?", new Object[] { stopCode});
-		if (stopCode != -1)
-			settingsChanged();
-	}
-	
-	public static void triggerInitialGoogleBackup(Context ctx) {
-		SettingsHelper db = null;
-		try  {
-			db = new SettingsHelper(ctx);
-			if (db.getGlobalSetting("initialbackupdone", null) != null)
-				return;
-			
-			db.setGlobalSetting("initialbackupdone", "t");
-			db.settingsChanged();
-		} catch (Throwable t) {
-		} finally {
-			if (db != null)
-				db.close();
-		}
-	}
-	
-	private void settingsChanged() {
-		try {
-		   Class backupManagerClass = Class.forName("android.app.backup.BackupManager");
-		   Method dataChanged = backupManagerClass.getMethod("dataChanged");
-		   dataChanged.invoke(null);
-		} catch (Throwable t) {
-		}
-	}
-	
+    public String getGlobalSetting(String name, String defaultValue)
+    {
+        return getBusStopSetting(-1, name, defaultValue);
+    }
 
-	public boolean backup(String filename) {
+    public void setGlobalSetting(String name, String value)
+    {
+        setBusStopSetting(-1, name, value);
+    }
+
+    public void deleteGlobalSetting(String name)
+    {
+        deleteBusStopSetting(-1, name);
+    }
+
+    public String getBusStopSetting(long stopCode, String name, String defaultValue)
+    {
+        String result = defaultValue;
+
+        Cursor c = null;
+        try {
+            c = db.query(SETTINGS_TABLE,
+                        new String[] { SETTINGS_COL_SETTINGVALUE },
+                        "StopCode = ? AND SettingName = ?",
+                        new String[] { Long.toString(stopCode), name },
+                        null,
+                        null,
+                        null);
+            if (c.moveToNext())
+                result = c.getString(0);
+        } finally {
+            if (c != null)
+                c.close();
+        }
+
+        return result;
+    }
+
+    public void setBusStopSetting(long stopCode, String name, String value)
+    {
+        deleteBusStopSetting(stopCode, name);
+        db.execSQL("INSERT INTO Settings (StopCode, SettingName, SettingValue) VALUES (?, ?, ?)", new Object[] {stopCode, name, value});
+        if (stopCode != -1)
+            settingsChanged();
+    }
+
+    public void deleteBusStopSetting(long stopCode, String name)
+    {
+        db.execSQL("DELETE FROM Settings WHERE StopCode = ? AND SettingName = ?", new Object[] { stopCode, name });
+        if (stopCode != -1)
+            settingsChanged();
+    }
+
+    public void deleteBusStopSettings(long stopCode)
+    {
+        db.execSQL("DELETE FROM Settings WHERE StopCode = ?", new Object[] { stopCode});
+        if (stopCode != -1)
+            settingsChanged();
+    }
+
+    public static void triggerInitialGoogleBackup(Context ctx) {
+        SettingsHelper db = null;
+        try  {
+            db = new SettingsHelper(ctx);
+            if (db.getGlobalSetting("initialbackupdone", null) != null)
+                return;
+
+            db.setGlobalSetting("initialbackupdone", "t");
+            db.settingsChanged();
+        } catch (Throwable t) {
+        } finally {
+            if (db != null)
+                db.close();
+        }
+    }
+
+    @SuppressWarnings("rawtypes")
+    private void settingsChanged() {
+        try {
+           Class backupManagerClass = Class.forName("android.app.backup.BackupManager");
+           Method dataChanged = backupManagerClass.getMethod("dataChanged");
+           dataChanged.invoke(null);
+        } catch (Throwable t) {
+        }
+    }
+
+
+    public boolean backup(String filename) {
         FileWriter output = null;
         try {
-        	output = new FileWriter(filename);
-        	return backup(output);
+            output = new FileWriter(filename);
+            return backup(output);
         } catch (Throwable t) {
-        	return false;
+            return false;
         } finally {
-        	if (output != null) {
-        		try {
-	        		output.flush();
-        		} catch (Throwable t) {}
-        		try {
-	        		output.close();
-        		} catch (Throwable t) {}
-        	}
+            if (output != null) {
+                try {
+                    output.flush();
+                } catch (Throwable t) {}
+                try {
+                    output.close();
+                } catch (Throwable t) {}
+            }
         }
-	}
+    }
 
-	public boolean backup(Writer outputWriter) {
+    public boolean backup(Writer outputWriter) {
         Cursor c = null;
         try {
             XmlSerializer serializer = Xml.newSerializer();
@@ -244,105 +245,105 @@ public class SettingsHelper
             serializer.startDocument("UTF-8", true);
             serializer.startTag("", "redbus");
 
-	        c = getBookmarks();
-	        while(c.moveToNext()) {
+            c = getBookmarks();
+            while(c.moveToNext()) {
                 serializer.startTag("", "busstop");
                 serializer.attribute("", "stopcode", Long.toString(c.getLong(0)));
                 serializer.attribute("", "name", c.getString(1));
                 serializer.endTag("", "busstop");
-	        }
+            }
             serializer.endTag("", "redbus");
             serializer.endDocument();
         } catch (Throwable t) {
-        	Log.e("StopBookmarks.Backup", "Backup failed", t);
-        	return false;
+            Log.e("StopBookmarks.Backup", "Backup failed", t);
+            return false;
         } finally {
-        	if (c != null)
-        		c.close();
-        	db.close();
+            if (c != null)
+                c.close();
+            db.close();
         }
-        
+
         return true;
-	}
-	
-	public boolean restore(String filename) {
+    }
+
+    public boolean restore(String filename) {
         FileReader inputFile = null;
         try {
-        	inputFile = new FileReader(filename);        	
-        	if (!restore(inputFile, false))
-        		return false;
-        	settingsChanged();
-        	return true;
+            inputFile = new FileReader(filename);
+            if (!restore(inputFile, false))
+                return false;
+            settingsChanged();
+            return true;
         } catch (Throwable t) {
-        	return false;
+            return false;
         } finally {
-        	if (inputFile != null) {
-        		try {
-        			inputFile.close();
-        		} catch (Throwable t) {}
-        	}
+            if (inputFile != null) {
+                try {
+                    inputFile.close();
+                } catch (Throwable t) {}
+            }
         }
-	}
-	
-	public boolean restore(Reader inputReader, boolean merge) {
+    }
+
+    public boolean restore(Reader inputReader, boolean merge) {
         try {
-			XmlPullParser parser = Xml.newPullParser();
-			parser.setInput(inputReader);
-			deleteBookmarks();
+            XmlPullParser parser = Xml.newPullParser();
+            parser.setInput(inputReader);
+            deleteBookmarks();
 
-			while(parser.next() != XmlPullParser.END_DOCUMENT) {
-				switch(parser.getEventType()) {
-				case XmlPullParser.START_TAG:
-					String tagName = parser.getName();
-					if (tagName.equals("busstop")) {
-						long stopCode = Long.parseLong(parser.getAttributeValue(null, "stopcode"));
-						String stopName = parser.getAttributeValue(null, "name");
-						addBookmark(stopCode, stopName);
-					}
-				}
-			}
+            while(parser.next() != XmlPullParser.END_DOCUMENT) {
+                switch(parser.getEventType()) {
+                case XmlPullParser.START_TAG:
+                    String tagName = parser.getName();
+                    if (tagName.equals("busstop")) {
+                        long stopCode = Long.parseLong(parser.getAttributeValue(null, "stopcode"));
+                        String stopName = parser.getAttributeValue(null, "name");
+                        addBookmark(stopCode, stopName);
+                    }
+                }
+            }
         } catch (Throwable t) {
-        	Log.e("StopBookmarks.Restore", "Restore failed", t);
-        	return false;
+            Log.e("StopBookmarks.Restore", "Restore failed", t);
+            return false;
         } finally {
-        	db.close();
+            db.close();
         }
-        
+
         return true;
-	}
+    }
 
 
 
-	private static class SettingsDbOpenHelper extends SQLiteOpenHelper {
-	    public static final String DATABASE_NAME = "rEdBusDB.db";
-	    public static final int DATABASE_VERSION = 2;
-	    
-	    public static final String CREATE_BOOKMARKS_TABLE_SQL = 
-	    	"CREATE TABLE Bookmarks (_id integer primary key, StopName TEXT)";
-	    public static final String CREATE_SETTINGS_TABLE_SQL = 
-	    	"CREATE TABLE Settings (_id integer primary key autoincrement, StopCode integer, SettingName TEXT, SettingValue TEXT)";
+    private static class SettingsDbOpenHelper extends SQLiteOpenHelper {
+        public static final String DATABASE_NAME = "rEdBusDB.db";
+        public static final int DATABASE_VERSION = 2;
 
-	    public static final String[] CREATE_TABLE_SQL = {
-	    	CREATE_BOOKMARKS_TABLE_SQL,
-	    	CREATE_SETTINGS_TABLE_SQL
-	    };
+        public static final String CREATE_BOOKMARKS_TABLE_SQL =
+            "CREATE TABLE Bookmarks (_id integer primary key, StopName TEXT)";
+        public static final String CREATE_SETTINGS_TABLE_SQL =
+            "CREATE TABLE Settings (_id integer primary key autoincrement, StopCode integer, SettingName TEXT, SettingValue TEXT)";
 
-	    public SettingsDbOpenHelper(Context context) {
-			super(context, DATABASE_NAME, null, DATABASE_VERSION);
-		}
+        public static final String[] CREATE_TABLE_SQL = {
+            CREATE_BOOKMARKS_TABLE_SQL,
+            CREATE_SETTINGS_TABLE_SQL
+        };
 
-		@Override
-		public void onCreate(SQLiteDatabase db) {
-			int length = CREATE_TABLE_SQL.length;
-			for (int i = 0; i < length; i++) {
-				db.execSQL(CREATE_TABLE_SQL[i]);
-			}
-		}
+        public SettingsDbOpenHelper(Context context) {
+            super(context, DATABASE_NAME, null, DATABASE_VERSION);
+        }
 
-		@Override
-		public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-			if ((oldVersion == 1) && (newVersion == 2))
-				db.execSQL(CREATE_SETTINGS_TABLE_SQL);
-		}
-	}
+        @Override
+        public void onCreate(SQLiteDatabase db) {
+            int length = CREATE_TABLE_SQL.length;
+            for (int i = 0; i < length; i++) {
+                db.execSQL(CREATE_TABLE_SQL[i]);
+            }
+        }
+
+        @Override
+        public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+            if ((oldVersion == 1) && (newVersion == 2))
+                db.execSQL(CREATE_SETTINGS_TABLE_SQL);
+        }
+    }
 }
