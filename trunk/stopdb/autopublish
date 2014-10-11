@@ -50,7 +50,7 @@ cp -f $INSTDIR/$dataformat.dat.gz $INSTDIR/$dataformat.dat.gz.old
 if [ x$oldsum != x$newsum ]; then
   OUTFILE=$dataformat.dat-`date +%s`.gz
   mv $INSTDIR/$dataformat.dat.gz $INSTDIR/$OUTFILE
-  $INSTDIR/dropbox_upload.py $DROPBOX_ACCESS_KEY $INSTDIR/$OUTFILE || exit 1
+  $INSTDIR/dropbox_upload.py upload $DROPBOX_ACCESS_KEY $INSTDIR/$OUTFILE || exit 1
   rm -f $OUTFILE
 else
   # Otherwise, no changed => delete the duplicated data from the database
