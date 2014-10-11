@@ -29,7 +29,6 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Point;
 import android.graphics.Rect;
-import android.graphics.RectF;
 import android.graphics.Bitmap.Config;
 import android.util.Log;
 import android.view.MotionEvent;
