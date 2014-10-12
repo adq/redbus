@@ -276,8 +276,9 @@ def dropboxUpload(srcfilename, destfilename):
 def dropboxPurge():
     client = dropbox.client.DropboxClient(settings.DROPBOX_ACCESS_KEY)
     files = sorted(client.metadata('/stopdb/')['contents'], key=lambda x: x['path'], reverse=True)
-    for curfile in files[1:]:
-        client.file_delete(curfile['path'])
+    if len(files) > 5:
+        for curfile in files[5:]:
+            client.file_delete(curfile['path'])
 
 
 def md5(filename):
