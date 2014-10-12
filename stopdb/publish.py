@@ -22,20 +22,96 @@ import os
 import urllib.request
 import urllib.parse
 import datetime
-import psycopg2
 import time
 import re
 import lxml.html
 from lxml import etree
-import xml.sax
-from BusServiceSaxDocumentHandler import BusServiceSaxDocumentHandler
 import json
-import psycopg2
-import sys
-import os
-import datetime
-import psycopg2
-import time
+
+
+def getLrtData(nowdate):
+    # Grab the list of all bus services
+    services = {}
+    resp = urllib.request.urlopen("http://www.mybustracker.co.uk/")
+    tree = lxml.html.fromstring(resp.read().decode('utf-8'))
+    for option in tree.xpath("//select[@name='serviceRef']/option"):
+        serviceCode = option.attrib["value"].strip()
+        serviceName = option.text.split('-', 1)[0].strip()
+        serviceRoute = option.text.split('-', 1)[1].strip()
+        services[serviceName] = {'name': serviceName,
+                                 'code': serviceCode,
+                                 'route': serviceRoute,
+                                 'provider': 'LRT',
+                                 'stops': 0}
+
+    # Now get all the stops
+    stops = {}
+    for service in services:
+        params = urllib.parse.urlencode({'googleMapMode': '2',
+                                         'googleServiceRef': services[service]['code'],
+                                         })
+
+        resp = urllib.request.urlopen("http://www.mybustracker.co.uk/update.php?widget=BTMap&widgetId=main&updateId=updateMap", params.encode('utf-8'))
+        updateXml = etree.fromstring(resp.read())
+        updateJson = json.loads(updateXml.xpath('/ajaxUpdate/updateElement')[0].text)
+
+    #    if len(updateJson['deviations']):
+    #        print(updateJson['deviations'])
+
+        for m in updateJson['markers']:
+            if 'content' not in m:
+                continue
+
+            stopName = m['content']['name']
+            stopCode = m['content']['stopId']
+            x = m['x']
+            y = m['y']
+            servicesAtThisStop = [name for (_code, name) in m['content']['lignes']]
+
+            facing = ''
+            marker = m['img']['url'].split('/')[-1]
+            if marker == 'marker_0.png':
+                facing = 'N'
+            elif marker == 'marker_1.png':
+                facing = 'NE'
+            elif marker == 'marker_2.png':
+                facing = 'E'
+            elif marker == 'marker_3.png':
+                facing = 'SE'
+            elif marker == 'marker_4.png':
+                facing = 'S'
+            elif marker == 'marker_5.png':
+                facing = 'SW'
+            elif marker == 'marker_6.png':
+                facing = 'W'
+            elif marker == 'marker_7.png':
+                facing = 'NW'
+            elif marker == 'marker_x.png':
+                facing = 'X'
+            elif marker == 'diversion.png':
+                facing = 'D'
+
+            for curservice in servicesAtThisStop:
+                if not curservice in services:
+                    print >>sys.stderr, "Warning: Stop %s has services which do not exist (%s)" % (stopCode, curservice)
+                else:
+                    services[curservice]['stops'] += 1
+
+            if stopCode is None or len(stopCode) == 0:
+                print(m)
+                continue
+
+            if not stopCode in stops:
+                stops[stopCode] = {'code': stopCode,
+                                   'name': stopName,
+                                   'x':        x,
+                                   'y':        y,
+                                   'services': servicesAtThisStop,
+                                   'facing':   facing,
+                                   'type':     'BCT',
+                                   'source':   'LRT'}
+
+    return (services, stops)
 
 
 # Algorithms "inspired by" wikipedia kd-tree page algorithms :-)
@@ -85,135 +161,7 @@ def makeKdTree(pointList, ndims=2, depth=0):
     return node
 
 
-def getLrtData(nowdate):
-    # grab the list of all bus services
-    services = {}
-    resp = urllib.request.urlopen("http://www.mybustracker.co.uk/")
-    tree = lxml.html.fromstring(resp.read().decode('utf-8'))
-    for option in tree.xpath("//select[@name='serviceRef']/option"):
-        serviceCode = option.attrib["value"].strip()
-        serviceName = option.text.split('-', 1)[0].strip()
-        serviceRoute = option.text.split('-', 1)[1].strip()
-        services[serviceName] = {'ServiceName': serviceName,
-                                 'ServiceRef': serviceCode,
-                                 'ServiceRoute': serviceRoute,
-                                 'StopCount': 0}
-
-    # First of all, get service details from the new website
-    stops = {}
-    for service in services:
-        params = urllib.parse.urlencode({'googleMapMode': '2',
-                                         'googleServiceRef': services[service]['ServiceRef'],
-                                         })
-
-        resp = urllib.request.urlopen("http://www.mybustracker.co.uk/update.php?widget=BTMap&widgetId=main&updateId=updateMap", params.encode('utf-8'))
-        updateXml = etree.fromstring(resp.read())
-        updateJson = json.loads(updateXml.xpath('/ajaxUpdate/updateElement')[0].text)
-
-    #    if len(updateJson['deviations']):
-    #        print(updateJson['deviations'])
-
-        for m in updateJson['markers']:
-            if 'content' not in m:
-                continue
-
-            stopName = m['content']['name']
-            stopCode = m['content']['stopId']
-            x = m['x']
-            y = m['y']
-            servicesAtThisStop = [name for (_code, name) in m['content']['lignes']]
-
-            facing = ''
-            marker = m['img']['url'].split('/')[-1]
-            if marker == 'marker_0.png':
-                facing = 'N'
-            elif marker == 'marker_1.png':
-                facing = 'NE'
-            elif marker == 'marker_2.png':
-                facing = 'E'
-            elif marker == 'marker_3.png':
-                facing = 'SE'
-            elif marker == 'marker_4.png':
-                facing = 'S'
-            elif marker == 'marker_5.png':
-                facing = 'SW'
-            elif marker == 'marker_6.png':
-                facing = 'W'
-            elif marker == 'marker_7.png':
-                facing = 'NW'
-            elif marker == 'marker_x.png':
-                facing = 'X'
-            elif marker == 'diversion.png':
-                facing = 'D'
-
-            for tmpservice in servicesAtThisStop:
-                if not tmpservice in services:
-                    print >>sys.stderr, "Warning: Stop %s has services which do not exist (%s)" % (stopCode, tmpservice)
-                else:
-                    services[tmpservice]['StopCount'] += 1
-
-            if stopCode is None or len(stopCode) == 0:
-                print(m)
-                continue
-
-            if not stopCode in stops:
-                stops[stopCode] = {'StopCode': stopCode,
-                                   'StopName': stopName,
-                                   'X':        x,
-                                   'Y':        y,
-                                   'Services': servicesAtThisStop,
-                                   'Facing':   facing}
-
-    # Connect to database
-    db = psycopg2.connect("host=beyond dbname=redbus user=redbus password=password")
-    dbcur = db.cursor()
-
-    # Add services to the database
-    for service in services.values():
-        dbcur.execute("INSERT INTO services (service_name, service_route, service_provider, created_date) VALUES (%s, %s, %s, %s); SELECT last_value FROM services_service_id_seq",
-                      (service['ServiceName'], service['ServiceRoute'], 'LRT', nowdate))
-        service['DbServiceId'] = dbcur.fetchone()[0]
-    db.commit()
-
-    # Add stops to the DB
-    for stop in stops.values():
-        dbcur.execute("INSERT INTO stops (stop_code, stop_name, x, y, facing, stop_type, source, created_date) " +
-                      "SELECT %(stop_code)s, %(stop_name)s, %(x)s, %(y)s, %(facing)s, %(stop_type)s, %(source)s, %(date)s ",
-                      {'stop_code': stop['StopCode'],
-                       'stop_name': stop['StopName'],
-                       'x': stop['X'],
-                       'y': stop['Y'],
-                       'facing': stop['Facing'],
-                       'stop_type': 'BCT',
-                       'source': 'LRT',
-                       'date': nowdate})
-    db.commit()
-
-    # Populate the link table between services and stops
-    for stop in stops.values():
-        for serviceName in stop['Services']:
-            if serviceName in services:
-                dbcur.execute("INSERT INTO stops_services (stop_id, service_id, created_date) "+
-                              "SELECT stops.stop_id, services.service_id, %(date)s " +
-                              "FROM stops " +
-                              "CROSS JOIN services " +
-                              "WHERE stops.stop_code=%(stopcode)s AND stops.created_date = %(date)s " +
-                              "AND services.service_provider = 'LRT' AND services.service_name = %(service)s AND services.created_date = %(date)s",
-                              {'date': nowdate,
-                               'stopcode': stop['StopCode'],
-                               'service': serviceName})
-
-                if dbcur.statusmessage != 'INSERT 0 1':
-                    print("Failed to insert entry for stop %s service %s" % (stop['StopCode'], serviceName))
-
-    db.commit()
-
-    # DONE
-    dbcur.close()
-    db.close()
-
-
-def makeStopsDat(destfile, nowdate):
+def makeStopsDat(destfile):
     # Connect to database
     db = psycopg2.connect("host=beyond dbname=redbus user=redbus password=password")
     curs = db.cursor()
@@ -396,6 +344,7 @@ def dopublish():
       $INSTDIR/removedata LATEST
     fi
 
+
 def process():
     parser = argparse.ArgumentParser()
     subap = parser.add_subparsers()
@@ -408,7 +357,7 @@ def process():
 
     args = parser.parse_args()
     if hasattr(args, 'dropboxkey'):
-        doauth(args.dropboxkey, args.dropboxsecret)
+        dropboxKey(args.dropboxkey, args.dropboxsecret)
     else:
         dopublish()
 
