@@ -21,15 +21,17 @@ import sys
 import os
 import urllib
 import urllib2
-import datetime
 import time
-import re
 import lxml.html
 from lxml import etree
 import json
 import hashlib
 import dropbox
 import settings
+import tempfile
+import gzip
+import shutil
+import argparse
 
 
 def getLrtData():
@@ -166,7 +168,7 @@ class Node:
 
         # bitmap of which services stop here
         stopmap = 0
-        for service in stop['services']:
+        for service in self.details['services']:
             stopmap |= 1 << service['idx']
 
         # write the record
@@ -240,10 +242,10 @@ def makeStopsDat(services, stops, filename):
     stopNamesFile.close()
 
     # output the services
-    treeFile.write(struct.pack('>i', len(servicesList)))
-    for service in servicesList:
+    treeFile.write(struct.pack('>i', len(services)))
+    for service in sorted(services, key=lambda x: x['idx']):
         treeFile.write(struct.pack(">B", 0))  # service provider byte; currently 0 == LRT
-        treeFile.write((service['ServiceName'] + '\0').encode('utf-8'))
+        treeFile.write((service['name'] + '\0').encode('utf-8'))
 
     # update file headers
     treeFile.seek(4, os.SEEK_SET)
