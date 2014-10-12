@@ -29,7 +29,7 @@ from lxml import etree
 import json
 
 
-def getLrtData(nowdate):
+def getLrtData():
     # Grab the list of all bus services
     services = {}
     resp = urllib.request.urlopen("http://www.mybustracker.co.uk/")
@@ -66,7 +66,20 @@ def getLrtData(nowdate):
             stopCode = m['content']['stopId']
             x = m['x']
             y = m['y']
-            servicesAtThisStop = [name for (_code, name) in m['content']['lignes']]
+
+            stopServices = []
+            for curservicename in [name for (_code, name) in m['content']['lignes']]:
+                service = services.get(curservicename)
+
+                if service is None:
+                    print >>sys.stderr, "Warning: Stop %s has services which do not exist (%s)" % (stopCode, service)
+                else:
+                    stopServices.append(service)
+                    service['stops'] += 1
+
+            # skip stops with no services arriving at them
+            if len(stopServices) == 0:
+                continue
 
             facing = ''
             marker = m['img']['url'].split('/')[-1]
@@ -91,12 +104,6 @@ def getLrtData(nowdate):
             elif marker == 'diversion.png':
                 facing = 'D'
 
-            for curservice in servicesAtThisStop:
-                if not curservice in services:
-                    print >>sys.stderr, "Warning: Stop %s has services which do not exist (%s)" % (stopCode, curservice)
-                else:
-                    services[curservice]['stops'] += 1
-
             if stopCode is None or len(stopCode) == 0:
                 print(m)
                 continue
@@ -106,7 +113,7 @@ def getLrtData(nowdate):
                                    'name': stopName,
                                    'x':        x,
                                    'y':        y,
-                                   'services': servicesAtThisStop,
+                                   'services': stopServices,
                                    'facing':   facing,
                                    'type':     'BCT',
                                    'source':   'LRT'}
@@ -117,26 +124,56 @@ def getLrtData(nowdate):
 # Algorithms "inspired by" wikipedia kd-tree page algorithms :-)
 class Node:
     def write(self, treeFile, stopNamesFile, recordnumgen):
+        # recurse on children
         leftfilepos=-1
-        rightfilepos=-1
-
         if self.leftChild:
             leftfilepos=self.leftChild.write(treeFile,stopNamesFile,recordnumgen)
+        rightfilepos=-1
         if self.rightChild:
             rightfilepos=self.rightChild.write(treeFile,stopNamesFile,recordnumgen)
 
+        # write out the stop name
         stopNameOffset = stopNamesFile.tell()
-        stopNamesFile.write((self.details['stopname'] + '\0').encode('utf-8'))
+        stopNamesFile.write((self.details['name'] + '\0').encode('utf-8'))
 
+        # figure out the facing field
+        facing = 0
+        if self.details['facing'] == 'N':
+            facing |= 0x08 | 0
+        elif self.details['facing'] == 'NE':
+            facing |= 0x08 | 1
+        elif self.details['facing'] == 'E':
+            facing |= 0x08 | 2
+        elif self.details['facing'] == 'SE':
+            facing |= 0x08 | 3
+        elif self.details['facing'] == 'S':
+            facing |= 0x08 | 4
+        elif self.details['facing'] == 'SW':
+            facing |= 0x08 | 5
+        elif self.details['facing'] == 'W':
+            facing |= 0x08 | 6
+        elif self.details['facing'] == 'NW':
+            facing |= 0x08 | 7
+        elif self.details['facing'] == 'X':
+            facing |= 0x08 | 0x10
+        elif self.details['facing'] == 'D':
+            facing |= 0x08 | 0x20
+
+        # bitmap of which services stop here
+        stopmap = 0
+        for service in stop['services']:
+            stopmap |= 1 << service['idx']
+
+        # write the record
         treeFile.write(struct.pack(">hhIiiQQBI",
                                     leftfilepos,
                                     rightfilepos,
-                                    self.details['stopcode'],
-                                    int(self.details['xy'][0] * 1000000),
-                                    int(self.details['xy'][1] * 1000000),
-                                    (self.details['stopmap'] >> 64) & 0xffffffffffffffff,
-                                    self.details['stopmap'] & 0xffffffffffffffff,
-                                    self.details['facing'],  # note, 4 bits are unused here
+                                    self.details['code'],
+                                    int(self.details['x'] * 1000000),
+                                    int(self.details['y'] * 1000000),
+                                    (stopmap >> 64) & 0xffffffffffffffff,
+                                    stopmap & 0xffffffffffffffff,
+                                    facing,  # note, 4 bits are unused here
                                     stopNameOffset
                                    ))
         return next(recordnumgen)
@@ -150,7 +187,7 @@ def makeKdTree(pointList, ndims=2, depth=0):
     axis = depth % ndims
 
     # Sort point list and choose median as pivot element
-    pointList.sort(key=lambda point: point['xy'][axis])
+    pointList.sort(key=lambda point: point['x'] if axis == 0 else point['y'])
     median = int(len(pointList)/2)
 
     # Create node and construct subtrees
@@ -161,83 +198,20 @@ def makeKdTree(pointList, ndims=2, depth=0):
     return node
 
 
-def makeStopsDat(destfile):
-    # Connect to database
-    db = psycopg2.connect("host=beyond dbname=redbus user=redbus password=password")
-    curs = db.cursor()
-    mapcurs = db.cursor()
-
-    # Get the list of services from the database
-    servicesById = {}
-    servicesList = []
-    curs.execute("SELECT service_id, service_name FROM services WHERE created_date = %s ORDER BY service_name", (nowdate, ))
-    for row in curs:
-        dbserviceid = row[0]
-        service_name = row[1]
-        service = {'DbServiceId': dbserviceid,
-                   'ServiceName': service_name,
-                   'ServiceIdx': len(servicesList)
-                   }
-        servicesById[dbserviceid] = service
-        servicesList.append(service)
-    if len(servicesList) > 128:
+def makeStopsDat(services, stops, destfile):
+    # Check we don't have too many services or stops for current file format!
+    if len(services) > 128:
         print >>sys.stderr, "Error: more than 128 services found - need to fix file format!"
         sys.exit(1)
-
-    # Get the list of stops from the database
-    stops=[]
-    curs.execute("SELECT stop_id, stop_code, stop_name, x, y, facing FROM stops WHERE created_date = %s order by stop_code desc", (nowdate, ))
-    for row in curs:
-        # stop data
-        dbstopid = row[0]
-        stopcode = row[1]
-        stopname = row[2]
-        x = float(row[3])
-        y = float(row[4])
-        facingTxt = row[5]
-
-        # Figure out the stopmap bitmap
-        stopmap = 0
-        mapcurs.execute("SELECT service_id FROM stops_services WHERE created_date = %s AND stop_id = %s", (nowdate, dbstopid))
-        for maprow in mapcurs:
-            service = servicesById[maprow[0]]
-            stopmap |= 1 << service['ServiceIdx']
-
-        # figure out the facing field
-        facing = 0
-        if facingTxt == 'N':
-            facing |= 0x08 | 0
-        elif facingTxt == 'NE':
-            facing |= 0x08 | 1
-        elif facingTxt == 'E':
-            facing |= 0x08 | 2
-        elif facingTxt == 'SE':
-            facing |= 0x08 | 3
-        elif facingTxt == 'S':
-            facing |= 0x08 | 4
-        elif facingTxt == 'SW':
-            facing |= 0x08 | 5
-        elif facingTxt == 'W':
-            facing |= 0x08 | 6
-        elif facingTxt == 'NW':
-            facing |= 0x08 | 7
-        elif facingTxt == 'X':
-            facing |= 0x08 | 0x10
-        elif facingTxt == 'D':
-            facing |= 0x08 | 0x20
-
-        # Only add the stop if we actually have services arriving at it
-        if stopmap != 0:
-            stops.append({'xy': (x,y),
-                          'stopcode': stopcode,
-                          'stopname': stopname,
-                          'stopmap': stopmap,
-                          'facing': facing})
-
     if len(stops) > 32767:
         print >>sys.stderr, "Error: more than 32767 stops found - need to fix file format!"
         sys.exit(1)
 
+    # assign each service an internal idx, first sorting the names consistently so they map to the same IDs if there's been no actual change
+    idx = 0
+    for servicename in sorted(services.keys()):
+        services[servicename]['idx'] = idx
+        idx += 1
 
     # Open treefile and write header
     treeFile = open(destfile + ".tree", "wb")
@@ -286,18 +260,6 @@ def dropboxUpload(accesskey, filename):
     client = dropbox.client.DropboxClient(accesskey)
     with open(filename, 'rb') as f:
         client.put_file('stopdb/' + os.path.split(filename)[1], f)
-
-
-def purgePostgres():
-    db = psycopg2.connect("host=beyond dbname=redbus user=redbus password=password")
-    dbcur = db.cursor()
-    dbcur.execute("TRUNCATE TABLE stops_services")
-    dbcur.execute("TRUNCATE TABLE services")
-    dbcur.execute("TRUNCATE TABLE stops")
-    db.commit()
-    dbcur.close()
-    db.close()
-
 
 
 def dopublish():
