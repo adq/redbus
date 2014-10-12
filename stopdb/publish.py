@@ -46,7 +46,8 @@ def getLrtData():
                                  'stops': 0}
 
     # Now get all the stops
-    stops = {}
+    stops = []
+    seenStops = {}
     for service in services:
         params = urllib.parse.urlencode({'googleMapMode': '2',
                                          'googleServiceRef': services[service]['code'],
@@ -109,15 +110,16 @@ def getLrtData():
                 print(m)
                 continue
 
-            if not stopCode in stops:
-                stops[stopCode] = {'code': stopCode,
-                                   'name': stopName,
-                                   'x':        x,
-                                   'y':        y,
-                                   'services': stopServices,
-                                   'facing':   facing,
-                                   'type':     'BCT',
-                                   'source':   'LRT'}
+            if stopCode not in seenStops:
+                stops.append({'code': stopCode,
+                              'name': stopName,
+                              'x':        x,
+                              'y':        y,
+                              'services': stopServices,
+                              'facing':   facing,
+                              'type':     'BCT',
+                              'source':   'LRT'}
+                seenStops[stopCode] = True
 
     return (services, stops)
 
