@@ -19,8 +19,8 @@
 import struct
 import sys
 import os
-import urllib.request
-import urllib.parse
+import urllib
+import urllib2
 import datetime
 import time
 import re
@@ -28,12 +28,14 @@ import lxml.html
 from lxml import etree
 import json
 import hashlib
+import dropbox
+import settings
 
 
 def getLrtData():
     # Grab the list of all bus services
     services = {}
-    resp = urllib.request.urlopen("http://www.mybustracker.co.uk/")
+    resp = urllib2.urlopen("http://www.mybustracker.co.uk/")
     tree = lxml.html.fromstring(resp.read().decode('utf-8'))
     for option in tree.xpath("//select[@name='serviceRef']/option"):
         serviceCode = option.attrib["value"].strip()
@@ -118,7 +120,7 @@ def getLrtData():
                               'services': stopServices,
                               'facing':   facing,
                               'type':     'BCT',
-                              'source':   'LRT'}
+                              'source':   'LRT'})
                 seenStops[stopCode] = True
 
     return (services, stops)
@@ -265,10 +267,17 @@ def dropboxKey(dropboxkey, dropboxsecret):
     print "Your access token is {}".format(access_token)
 
 
-def dropboxUpload(accesskey, srcfilename, destfilename):
-    client = dropbox.client.DropboxClient(accesskey)
+def dropboxUpload(srcfilename, destfilename):
+    client = dropbox.client.DropboxClient(settings.DROPBOX_ACCESS_KEY)
     with open(srcfilename, 'rb') as f:
         client.put_file(destfilename, f)
+
+
+def dropboxPurge():
+    client = dropbox.client.DropboxClient(settings.DROPBOX_ACCESS_KEY)
+    files = sorted(client.metadata('/stopdb/')['contents'], key=lambda x: x['path'], reverse=True)
+    for curfile in files[1:]:
+        client.file_delete(curfile['path'])
 
 
 def md5(filename):
@@ -290,9 +299,9 @@ def dopublish():
     newmd5 = md5('bus3.dat.gz')
     oldmd5 = md5('bus3.dat.gz.old')
     if newmd5 != oldmd5:
-        dropboxUpload(ACCESSKEY, 'bus3.dat.gz', 'stopdb/bus3.dat-{}.gz'.format(int(time.time())))
+        dropboxUpload('bus3.dat.gz', 'stopdb/bus3.dat-{}.gz'.format(int(time.time())))
         shutil.copyfile('bus3.dat.gz', 'bus3.dat.gz.old')
-        # FIXME: purge dropbox?
+        # dropboxPurge()
 
 
 def process():
