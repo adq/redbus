@@ -27,6 +27,7 @@ import re
 import lxml.html
 from lxml import etree
 import json
+import hashlib
 
 
 def getLrtData():
@@ -198,7 +199,7 @@ def makeKdTree(pointList, ndims=2, depth=0):
     return node
 
 
-def makeStopsDat(services, stops, destfile):
+def makeStopsDat(services, stops, filename):
     # Check we don't have too many services or stops for current file format!
     if len(services) > 128:
         print >>sys.stderr, "Error: more than 128 services found - need to fix file format!"
@@ -214,13 +215,10 @@ def makeStopsDat(services, stops, destfile):
         idx += 1
 
     # Open treefile and write header
-    treeFile = open(destfile + ".tree", "wb")
-    treeFile.write(struct.pack(">BBBB", ord('b'), ord('u'), ord('s'), ord('3')))  # magic
+    treeFile = tempfile.TemporaryFile()
+    treeFile.write(struct.pack(">BBBB", ord('b'), ord('u'), ord('s'), ord('3')))  # magic "bus3"
     treeFile.write(struct.pack(">I", 0))  # integer root tree pos placeholder
     treeFile.write(struct.pack(">ii", 55946052, -3188879))  # Default map pos at centre of Edinburgh
-
-    # The stop names file
-    stopNamesFile = open(destfile + ".stopnames", "wb")
 
     # Build + write the tree
     def recordnumgenerator():
@@ -228,21 +226,30 @@ def makeStopsDat(services, stops, destfile):
         while 1:
             yield num
             num+=1
+    stopNamesFile = tempfile.TemporaryFile()
     rootpos = makeKdTree(stops).write(treeFile, stopNamesFile, recordnumgenerator())
 
-    # output file headers and close 'em
-    treeFile.seek(4, os.SEEK_SET)
-    treeFile.write(struct.pack('>i',rootpos))
-    treeFile.close()
+    # append the stop names
+    stopNamesFile.flush()
+    stopNamesFile.seek(0, os.SEEK_SET)
+    treeFile.write(stopNamesFile.read())
     stopNamesFile.close()
 
     # output the services
-    servicesFile = open(destfile + ".services", "wb")
-    servicesFile.write(struct.pack('>i', len(servicesList)))
+    treeFile.write(struct.pack('>i', len(servicesList)))
     for service in servicesList:
-        servicesFile.write(struct.pack(">B", 0))  # service provider byte; currently 0 == LRT
-        servicesFile.write((service['ServiceName'] + '\0').encode('utf-8'))
-    servicesFile.close()
+        treeFile.write(struct.pack(">B", 0))  # service provider byte; currently 0 == LRT
+        treeFile.write((service['ServiceName'] + '\0').encode('utf-8'))
+
+    # update file headers
+    treeFile.seek(4, os.SEEK_SET)
+    treeFile.write(struct.pack('>i',rootpos))
+
+    # gzip it into final output file
+    treeFile.seek(0, os.SEEK_SET)
+    with gzip.GzipFile(filename, 'w', 9) as f:
+        f.write(treeFile.read())
+    treeFile.close()
 
 
 def dropboxKey(dropboxkey, dropboxsecret):
@@ -256,55 +263,34 @@ def dropboxKey(dropboxkey, dropboxsecret):
     print "Your access token is {}".format(access_token)
 
 
-def dropboxUpload(accesskey, filename):
+def dropboxUpload(accesskey, srcfilename, destfilename):
     client = dropbox.client.DropboxClient(accesskey)
-    with open(filename, 'rb') as f:
-        client.put_file('stopdb/' + os.path.split(filename)[1], f)
+    with open(srcfilename, 'rb') as f:
+        client.put_file(destfilename, f)
+
+
+def md5(filename):
+    if not os.path.exists(filename):
+        return ''
+
+    m = hashlib.md5()
+    with open(filename, 'r') as f:
+        m.update(f.read())
+    return m.digest()
 
 
 def dopublish():
+    # get and generate the data
+    (services, stops) = getLrtData()
+    makeStopsDat(services, stops, 'bus3.dat.gz')
 
-
-    . /etc/redbus.conf
-
-    INSTDIR=/usr/local/redbus/stopdb
-
-    nowdate=`date +%Y-%m-%dT%H:%M:%S`
-    dataformat=bus3
-
-    # Download data from remote sites
-    $INSTDIR/getlrtdata $nowdate || exit 1
-
-    # Extract stops from XML
-    #$INSTDIR/getnaptandata $INSTDIR/stopdata/NaPTAN620.xml $nowdate || exit 1
-    #$INSTDIR/getnaptandata $INSTDIR/stopdata/NaPTAN627.xml $nowdate || exit 1
-    #$INSTDIR/getnaptandata $INSTDIR/stopdata/NaPTAN628.xml $nowdate || exit 1
-
-    # Generate new stops database
-    $INSTDIR/makestopsdat $INSTDIR/$dataformat $nowdate || exit 1
-    cat $INSTDIR/$dataformat.tree $INSTDIR/$dataformat.services $INSTDIR/$dataformat.stopnames > $INSTDIR/$dataformat.dat
-    /usr/bin/gzip -n -f -9 $INSTDIR/$dataformat.dat || exit 1
-    newsum=`/usr/bin/md5sum $INSTDIR/$dataformat.dat.gz | cut -f1 -d ' '` || exit 1
-
-    # handle old data
-    if [ ! -f $INSTDIR/$dataformat.dat.gz.old ]; then
-      echo "Old data file is missing!"
-      exit 1
-    fi
-    oldsum=`/usr/bin/md5sum $INSTDIR/$dataformat.dat.gz.old | cut -f1 -d ' '` || exit 1
-    rm -f $INSTDIR/$dataformat.dat.gz.old
-    cp -f $INSTDIR/$dataformat.dat.gz $INSTDIR/$dataformat.dat.gz.old
-
-    # Publish if something has changed!
-    if [ x$oldsum != x$newsum ]; then
-      OUTFILE=$dataformat.dat-`date +%s`.gz
-      mv $INSTDIR/$dataformat.dat.gz $INSTDIR/$OUTFILE
-      $INSTDIR/dropbox_upload.py upload $DROPBOX_ACCESS_KEY $INSTDIR/$OUTFILE || exit 1
-      rm -f $OUTFILE
-    else
-      # Otherwise, no changed => delete the duplicated data from the database
-      $INSTDIR/removedata LATEST
-    fi
+    # do stuff with file if it was different from the previous one
+    newmd5 = md5('bus3.dat.gz')
+    oldmd5 = md5('bus3.dat.gz.old')
+    if newmd5 != oldmd5:
+        dropboxUpload(ACCESSKEY, 'bus3.dat.gz', 'stopdb/bus3.dat-{}.gz'.format(int(time.time())))
+        shutil.copyfile('bus3.dat.gz', 'bus3.dat.gz.old')
+        # FIXME: purge dropbox?
 
 
 def process():
@@ -315,7 +301,7 @@ def process():
     keyap.add_argument("dropboxkey", help='Dropbox key')
     keyap.add_argument("dropboxsecret", help='Dropbox secret')
 
-    uploadap = subap.add_parser('publishstops', help='Publish stops data')
+    subap.add_parser('publishstops', help='Publish stops data')
 
     args = parser.parse_args()
     if hasattr(args, 'dropboxkey'):
