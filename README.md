@@ -1,7 +1,9 @@
 redbus
 ======
 
-Welcome to the redbus project. The current features of redbus are:
+Welcome to the redbus project. Available on Google Play at: https://play.google.com/store/apps/details?id=org.redbus
+
+The current features of redbus are:
 
 * Show bus times for stop code.
 * Bookmarked stop codes.
