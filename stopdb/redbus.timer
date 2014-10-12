@@ -1,0 +1,8 @@
+[Unit]
+Description=Daily redbus update
+
+[Timer]
+OnCalendar=daily
+
+[Install]
+WantedBy=multi-user.target

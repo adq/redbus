@@ -1,0 +1,7 @@
+[Unit]
+Description=Redbus stopdb update
+
+[Service]
+Type=simple
+ExecStart=/usr/local/redbus/stopdb/autopublish
+WorkingDirectory=/usr/local/redbus/stopdb
