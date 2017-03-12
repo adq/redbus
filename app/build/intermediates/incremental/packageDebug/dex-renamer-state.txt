@@ -1,7 +1,0 @@
-#Sun Mar 12 12:01:01 GMT 2017
-base.0=/home/adq/dev/redbus/app/build/intermediates/transforms/dex/debug/folders/1000/10000/instant-run_eadc98f1cb371195c33871507aadaa24636e1004
-renamed.1=classes.dex
-renamed.0=classes2.dex
-file.1=/home/adq/dev/redbus/app/build/intermediates/transforms/dex/debug/folders/1000/10000/instant-run-bootstrap_966dc35a26a19c2dd5a5ab30b04da7ea4a4e1d4a/classes.dex
-base.1=/home/adq/dev/redbus/app/build/intermediates/transforms/dex/debug/folders/1000/10000/instant-run-bootstrap_966dc35a26a19c2dd5a5ab30b04da7ea4a4e1d4a
-file.0=/home/adq/dev/redbus/app/build/intermediates/transforms/dex/debug/folders/1000/10000/instant-run_eadc98f1cb371195c33871507aadaa24636e1004/classes.dex
