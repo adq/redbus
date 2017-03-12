@@ -1,0 +1,22 @@
+[
+    {
+        "merged": "/home/adq/dev/redbus/app/build/intermediates/res/merged/debug/menu/stopbookmarks_menu.xml",
+        "source": "/home/adq/dev/redbus/app/src/main/res/menu/stopbookmarks_menu.xml"
+    },
+    {
+        "merged": "/home/adq/dev/redbus/app/build/intermediates/res/merged/debug/menu/bustimes_menu.xml",
+        "source": "/home/adq/dev/redbus/app/src/main/res/menu/bustimes_menu.xml"
+    },
+    {
+        "merged": "/home/adq/dev/redbus/app/build/intermediates/res/merged/debug/menu/stopbookmarks_item_menu.xml",
+        "source": "/home/adq/dev/redbus/app/src/main/res/menu/stopbookmarks_item_menu.xml"
+    },
+    {
+        "merged": "/home/adq/dev/redbus/app/build/intermediates/res/merged/debug/menu/stopmap_menu.xml",
+        "source": "/home/adq/dev/redbus/app/src/main/res/menu/stopmap_menu.xml"
+    },
+    {
+        "merged": "/home/adq/dev/redbus/app/build/intermediates/res/merged/debug/menu/trafficinfo_menu.xml",
+        "source": "/home/adq/dev/redbus/app/src/main/res/menu/trafficinfo_menu.xml"
+    }
+]

@@ -1,0 +1,211 @@
+[
+    {
+        "outputFile": "/home/adq/dev/redbus/app/build/intermediates/incremental/mergeDebugResources/merged.dir/values/values.xml",
+        "map": [
+            {
+                "to": {
+                    "startLine": 2,
+                    "startColumn": 4,
+                    "startOffset": 55,
+                    "endColumn": 58,
+                    "endOffset": 109
+                },
+                "from": {
+                    "file": "/home/adq/dev/redbus/app/src/main/res/values/strings.xml",
+                    "position": {
+                        "startLine": 3,
+                        "startColumn": 2,
+                        "startOffset": 54,
+                        "endColumn": 56,
+                        "endOffset": 108
+                    }
+                }
+            },
+            {
+                "to": {
+                    "startLine": 3,
+                    "startColumn": 4,
+                    "startOffset": 114,
+                    "endColumn": 208,
+                    "endOffset": 318
+                },
+                "from": {
+                    "file": "/home/adq/dev/redbus/app/src/main/res/values/strings.xml",
+                    "position": {
+                        "startLine": 5,
+                        "startColumn": 2,
+                        "startOffset": 233,
+                        "endColumn": 216,
+                        "endOffset": 447
+                    }
+                }
+            },
+            {
+                "to": {
+                    "startLine": 4,
+                    "startColumn": 4,
+                    "startOffset": 323,
+                    "endLine": 6,
+                    "endColumn": 10,
+                    "endOffset": 434
+                },
+                "from": {
+                    "file": "/home/adq/dev/redbus/app/src/main/res/values/strings.xml",
+                    "position": {
+                        "startLine": 6,
+                        "startColumn": 2,
+                        "startOffset": 450,
+                        "endLine": 8,
+                        "endColumn": 15,
+                        "endOffset": 571
+                    }
+                }
+            },
+            {
+                "to": {
+                    "startLine": 7,
+                    "startColumn": 4,
+                    "startOffset": 439,
+                    "endColumn": 118,
+                    "endOffset": 553
+                },
+                "from": {
+                    "file": "/home/adq/dev/redbus/app/src/main/res/values/strings.xml",
+                    "position": {
+                        "startLine": 4,
+                        "startColumn": 2,
+                        "startOffset": 111,
+                        "endColumn": 121,
+                        "endOffset": 230
+                    }
+                }
+            },
+            {
+                "to": {
+                    "startLine": 8,
+                    "startColumn": 4,
+                    "startOffset": 558,
+                    "endLine": 10,
+                    "endColumn": 9,
+                    "endOffset": 693
+                },
+                "from": {
+                    "file": "/home/adq/dev/redbus/app/src/main/res/values/text.xml",
+                    "position": {
+                        "startLine": 10,
+                        "startColumn": 1,
+                        "startOffset": 315,
+                        "endLine": 12,
+                        "endColumn": 9,
+                        "endOffset": 450
+                    }
+                }
+            },
+            {
+                "to": {
+                    "startLine": 11,
+                    "startColumn": 4,
+                    "startOffset": 698,
+                    "endLine": 13,
+                    "endColumn": 12,
+                    "endOffset": 834
+                },
+                "from": {
+                    "file": "/home/adq/dev/redbus/app/src/main/res/values/text.xml",
+                    "position": {
+                        "startLine": 14,
+                        "startColumn": 4,
+                        "startOffset": 457,
+                        "endLine": 16,
+                        "endColumn": 12,
+                        "endOffset": 593
+                    }
+                }
+            },
+            {
+                "to": {
+                    "startLine": 14,
+                    "startColumn": 4,
+                    "startOffset": 839,
+                    "endLine": 16,
+                    "endColumn": 9,
+                    "endOffset": 969
+                },
+                "from": {
+                    "file": "/home/adq/dev/redbus/app/src/main/res/values/text.xml",
+                    "position": {
+                        "startLine": 2,
+                        "startColumn": 1,
+                        "startOffset": 52,
+                        "endLine": 4,
+                        "endColumn": 9,
+                        "endOffset": 182
+                    }
+                }
+            },
+            {
+                "to": {
+                    "startLine": 17,
+                    "startColumn": 4,
+                    "startOffset": 974,
+                    "endLine": 19,
+                    "endColumn": 9,
+                    "endOffset": 1101
+                },
+                "from": {
+                    "file": "/home/adq/dev/redbus/app/src/main/res/values/text.xml",
+                    "position": {
+                        "startLine": 6,
+                        "startColumn": 1,
+                        "startOffset": 185,
+                        "endLine": 8,
+                        "endColumn": 9,
+                        "endOffset": 312
+                    }
+                }
+            },
+            {
+                "to": {
+                    "startLine": 20,
+                    "startColumn": 4,
+                    "startOffset": 1106,
+                    "endLine": 23,
+                    "endColumn": 9,
+                    "endOffset": 1290
+                },
+                "from": {
+                    "file": "/home/adq/dev/redbus/app/src/main/res/values/text.xml",
+                    "position": {
+                        "startLine": 18,
+                        "startColumn": 4,
+                        "startOffset": 603,
+                        "endLine": 21,
+                        "endColumn": 9,
+                        "endOffset": 787
+                    }
+                }
+            },
+            {
+                "to": {
+                    "startLine": 24,
+                    "startColumn": 4,
+                    "startOffset": 1295,
+                    "endLine": 27,
+                    "endColumn": 9,
+                    "endOffset": 1483
+                },
+                "from": {
+                    "file": "/home/adq/dev/redbus/app/src/main/res/values/text.xml",
+                    "position": {
+                        "startLine": 23,
+                        "startColumn": 4,
+                        "startOffset": 797,
+                        "endLine": 26,
+                        "endColumn": 9,
+                        "endOffset": 985
+                    }
+                }
+            }
+        ]
+    }
+]
